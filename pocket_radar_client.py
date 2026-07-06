@@ -98,10 +98,13 @@ def speech_command() -> list[str] | None:
 
 
 class PocketRadar:
-    def __init__(self, pwd, units="mph", speak=True):
+    def __init__(self, pwd, units="mph", speak=True, on_event=None):
         self.lib = PrLib()
         self.pwd = pwd
         self.units = units
+        # optional observer for the web UI (or anything else): called with a
+        # dict like {"type": "speed", ...} for speeds, status and connection
+        self.on_event = on_event
         self.client: BleakClient | None = None
         self.say_cmd = speech_command() if speak else None
         self.say_proc: subprocess.Popen | None = None
@@ -118,6 +121,11 @@ class PocketRadar:
         # radar state, reported when it changes (None = not yet known)
         self.battery = self.usb = self.meas = self.mac = None
 
+    def _emit(self, kind: str, **fields):
+        if self.on_event:
+            self.on_event({"type": kind,
+                           "ts": datetime.now().strftime("%H:%M:%S"), **fields})
+
     # -- notification plumbing: hand raw bytes to the async processor ---------
     def _on_notify(self, _char, data: bytearray):
         self.queue.put_nowait(bytes(data))
@@ -129,6 +137,7 @@ class PocketRadar:
     async def run_forever(self, address):
         """Connect, pair, and stream — reconnecting whenever the radar drops."""
         while True:
+            self._emit("connection", state="scanning")
             try:
                 device = await find_device(address)
                 await self._session(device)
@@ -136,6 +145,7 @@ class PocketRadar:
                 print(f"[{ts()}] disconnected ({e}); reconnecting…")
             except SystemExit as e:
                 print(e)
+            self._emit("connection", state="disconnected")
             await asyncio.sleep(2.0)
 
     async def _session(self, device):
@@ -146,6 +156,7 @@ class PocketRadar:
         ) as client:
             self.client = client
             print(f"[{ts()}] connected to {device.address}")
+            self._emit("connection", state="connected", address=device.address)
             await client.start_notify(SPEED_MEAS_UUID, self._on_notify)
 
             # kick off the handshake: send the pairing password (plaintext)
@@ -196,6 +207,7 @@ class PocketRadar:
                 await self._write(ENCR_THREE, encrypt=True)
                 print(f"[{ts()}] paired — session key {self.session_key.hex()}")
                 print(f"[{ts()}] streaming speeds (throw now)…\n")
+                self._emit("connection", state="paired")
                 self.ready.set()
             self.state += 1
         elif data[2] == 12:
@@ -219,6 +231,7 @@ class PocketRadar:
         if kind == MSG_SPEED and pt[3] == 0:
             speed = pt[13] & 0xFF
             print(f"[{ts()}]  ⚾  {speed} {self.units}")
+            self._emit("speed", speed=speed, units=self.units)
             self._speak(str(speed))
 
         elif kind == MSG_STATUS and pt[3] == 0:
@@ -256,6 +269,8 @@ class PocketRadar:
             changed.append("measuring" if meas == 1 else "idle")
         if changed:
             print(f"[{ts()}]  · {' · '.join(changed)}")
+            self._emit("status", battery=self.battery, usb=self.usb,
+                       units=self.units, meas=self.meas)
 
 
 async def find_device(address):

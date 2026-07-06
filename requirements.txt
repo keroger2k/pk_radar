@@ -1,2 +1,4 @@
 bleak         # cross-platform Bluetooth LE client
 pycryptodome  # AES-128 (the radar's payload encryption)
+fastapi       # web dashboard (radar_web.py)
+uvicorn[standard]  # ASGI server for the dashboard (standard = websocket support)

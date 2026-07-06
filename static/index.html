@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Radar</title>
+<style>
+  :root {
+    --page:           #f9f9f7;
+    --surface:        #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --hairline:       #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+    --accent:         #2a78d6;
+    --good:           #0ca30c;
+    --critical:       #d03b3b;
+    --warning-ink:    #8a6200;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:           #0d0d0d;
+      --surface:        #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --hairline:       #2c2c2a;
+      --border:         rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+      --good:           #0ca30c;
+      --critical:       #d03b3b;
+      --warning-ink:    #fab219;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header .spacer { flex: 1; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 12px; background: var(--surface);
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+  .pill.live .dot { background: var(--good); }
+  .pill.down .dot { background: var(--critical); }
+  .pill.wait .dot {
+    background: var(--warning-ink);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+
+  button {
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 12px; cursor: pointer;
+  }
+  button:hover { color: var(--text-primary); }
+
+  main {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    padding: 16px 20px 20px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  /* -- hero ---------------------------------------------------------------- */
+  .stage {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    gap: 28px;
+  }
+  .hero { text-align: center; }
+  .hero .label { font-size: 14px; color: var(--text-muted); margin-bottom: 4px; }
+  .hero .value {
+    font-size: clamp(96px, 22vmin, 200px);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .hero .value.empty { color: var(--text-muted); }
+  .hero .units { font-size: 20px; color: var(--text-secondary); margin-top: 6px; }
+  .hero .when { font-size: 13px; color: var(--text-muted); margin-top: 10px; min-height: 1.2em; }
+  .hero .value.pop { animation: pop 0.45s ease-out; }
+  @keyframes pop {
+    0%   { transform: scale(1.06); color: var(--accent); }
+    100% { transform: scale(1); }
+  }
+
+  /* -- KPI tiles ------------------------------------------------------------ */
+  .kpis {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; width: 100%; max-width: 560px;
+  }
+  .tile {
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .tile .label { font-size: 13px; color: var(--text-muted); }
+  .tile .value { font-size: 28px; font-weight: 600; margin-top: 2px; }
+  .tile .value small { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+
+  /* -- sidebar --------------------------------------------------------------- */
+  .side { display: flex; flex-direction: column; min-height: 0; }
+  .side h2 {
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    padding: 14px 16px 10px;
+  }
+  .side ol {
+    list-style: none; padding: 0 8px 10px; overflow-y: auto; flex: 1;
+  }
+  .side li {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 7px 8px; border-radius: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .side li:nth-child(odd) { background: color-mix(in srgb, var(--hairline) 35%, transparent); }
+  .side li .n     { color: var(--text-muted); font-size: 12px; width: 3ch; }
+  .side li .spd   { font-weight: 600; font-size: 16px; }
+  .side li .u     { color: var(--text-muted); font-size: 12px; }
+  .side li .top   {
+    font-size: 11px; color: var(--text-secondary);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .side li .top::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .side li .t     { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+  .side .empty-msg { color: var(--text-muted); font-size: 13px; padding: 4px 16px 16px; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; }
+    .side { max-height: 40vh; }
+    .stage { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Pocket Radar</h1>
+    <span id="status" class="pill wait"><span class="dot"></span><span id="status-text">Connecting to server…</span></span>
+    <span id="battery" class="pill" hidden><span id="battery-text"></span></span>
+    <span class="spacer"></span>
+    <button id="speak-btn" title="Speak each speed aloud">🔇 Voice off</button>
+    <button id="reset-btn" title="Clear this session's readings">Reset</button>
+  </header>
+
+  <main>
+    <section class="panel stage">
+      <div class="hero">
+        <div class="label">Last reading</div>
+        <div id="speed" class="value empty">—</div>
+        <div id="units" class="units">mph</div>
+        <div id="when" class="when"></div>
+      </div>
+      <div class="kpis">
+        <div class="tile"><div class="label">Swings</div><div id="kpi-count" class="value">0</div></div>
+        <div class="tile"><div class="label">Average</div><div id="kpi-avg" class="value">—</div></div>
+        <div class="tile"><div class="label">Max</div><div id="kpi-max" class="value">—</div></div>
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <h2>Previous swings</h2>
+      <ol id="history"></ol>
+      <div id="empty-msg" class="empty-msg">No readings yet — throw one.</div>
+    </aside>
+  </main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let history = [];          // oldest → newest, {speed, units, ts}
+  let status = {};
+  let speak = localStorage.getItem("radar-speak") === "1";
+  let ws;
+
+  function render() {
+    const n = history.length;
+    const last = history[n - 1];
+    const units = status.units || (last && last.units) || "mph";
+
+    const heroEl = $("speed");
+    heroEl.textContent = last ? last.speed : "—";
+    heroEl.classList.toggle("empty", !last);
+    $("units").textContent = units;
+    $("when").textContent = last ? "at " + last.ts : "";
+
+    $("kpi-count").textContent = n;
+    const max = n ? Math.max(...history.map(r => r.speed)) : null;
+    $("kpi-avg").innerHTML = n
+      ? (history.reduce((s, r) => s + r.speed, 0) / n).toFixed(1) + " <small>" + units + "</small>"
+      : "—";
+    $("kpi-max").innerHTML = n ? max + " <small>" + units + "</small>" : "—";
+
+    const list = $("history");
+    list.innerHTML = "";
+    // newest first; the first occurrence of the max gets the "top" tag
+    let topTagged = false;
+    for (let i = n - 1; i >= 0; i--) {
+      const r = history[i];
+      const li = document.createElement("li");
+      const isTop = n > 1 && r.speed === max && !topTagged &&
+                    (topTagged = true);
+      li.innerHTML =
+        '<span class="n">' + (i + 1) + '</span>' +
+        '<span class="spd">' + r.speed + '</span>' +
+        '<span class="u">' + r.units + '</span>' +
+        (isTop ? '<span class="top">top</span>' : '') +
+        '<span class="t">' + r.ts + '</span>';
+      list.appendChild(li);
+    }
+    $("empty-msg").hidden = n > 0;
+  }
+
+  const STATES = {
+    starting:     ["wait", "Starting…"],
+    scanning:     ["wait", "Scanning for radar…"],
+    connected:    ["wait", "Pairing…"],
+    paired:       ["live", "Live"],
+    disconnected: ["down", "Radar disconnected"],
+    offline:      ["down", "Server offline"],
+  };
+  function renderStatus() {
+    const [cls, text] = STATES[status.state] || STATES.starting;
+    $("status").className = "pill " + cls;
+    $("status-text").textContent = text;
+    const batt = status.battery;
+    $("battery").hidden = batt == null;
+    if (batt != null)
+      $("battery-text").textContent =
+        "🔋 " + batt + "/4" + (status.usb === 1 ? " · USB" : "");
+  }
+
+  function say(text) {
+    if (!("speechSynthesis" in window)) return;
+    // guard the cancel: Chrome can swallow an utterance queued right after
+    // an unconditional cancel()
+    if (speechSynthesis.speaking || speechSynthesis.pending)
+      speechSynthesis.cancel();           // latest speed wins
+    const u = new SpeechSynthesisUtterance(text);
+    u.onstart = () => console.log("[voice] speaking:", text);
+    u.onerror = e => {
+      console.warn("[voice] blocked:", e.error);
+      if (e.error === "not-allowed") armOnNextClick();
+    };
+    speechSynthesis.speak(u);
+  }
+
+  // Browsers block speech until the page has been clicked once after each
+  // load. If voice was left on and a reading arrives before any click, wait
+  // for the next click and confirm audio is unblocked.
+  let armed = false;
+  function armOnNextClick() {
+    if (armed) return;
+    armed = true;
+    $("speak-btn").textContent = "🔇 Click anywhere to enable voice";
+    document.addEventListener("click", () => {
+      armed = false;
+      renderSpeakBtn();
+      if (speak) say("voice on");
+    }, { once: true });
+  }
+
+  function onSpeed(r) {
+    history.push(r);
+    render();
+    $("speed").classList.remove("pop");
+    void $("speed").offsetWidth;          // restart the animation
+    $("speed").classList.add("pop");
+    if (speak) say(String(r.speed));
+  }
+
+  function connect() {
+    ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://")
+                       + location.host + "/ws");
+    ws.onmessage = e => {
+      const ev = JSON.parse(e.data);
+      if (ev.type === "snapshot") {
+        history = ev.history; status = ev.status;
+        render(); renderStatus();
+      } else if (ev.type === "speed") {
+        onSpeed(ev);
+      } else if (ev.type === "status") {
+        Object.assign(status, ev); renderStatus();
+      } else if (ev.type === "connection") {
+        status.state = ev.state; renderStatus();
+      }
+    };
+    ws.onclose = () => {
+      status.state = "offline"; renderStatus();
+      setTimeout(connect, 2000);
+    };
+  }
+
+  function renderSpeakBtn() {
+    $("speak-btn").textContent = speak ? "🔊 Voice on" : "🔇 Voice off";
+  }
+  $("speak-btn").onclick = () => {
+    speak = !speak;
+    localStorage.setItem("radar-speak", speak ? "1" : "0");
+    renderSpeakBtn();
+    if (speak) say("voice on");   // instant feedback that audio works
+    else if ("speechSynthesis" in window) speechSynthesis.cancel();
+  };
+  $("reset-btn").onclick = () => {
+    if (history.length && ws && ws.readyState === WebSocket.OPEN)
+      ws.send(JSON.stringify({ cmd: "reset" }));
+  };
+
+  renderSpeakBtn();
+  render();
+  connect();
+</script>
+</body>
+</html>

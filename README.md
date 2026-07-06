@@ -56,12 +56,29 @@ or `spd-say`/`espeak` on Linux; silently skipped if none is installed). Pass
 `--no-speak` to disable. It auto-reconnects when the radar drops the link.
 `Ctrl-C` to stop.
 
+### Web dashboard
+
+```bash
+python radar_web.py                      # serve on http://127.0.0.1:8000
+python radar_web.py --port 9000 --kph
+python radar_web.py --demo               # fake readings, no radar needed
+```
+
+Same BLE session, but with a browser UI: a big live speed readout, a sidebar of
+previous swings, and running count / average / max for the session. History is
+kept on the server, so refreshing the page (or opening it on a second device
+with `--host 0.0.0.0`) keeps the whole session. The **Reset** button clears it;
+the **Voice** toggle speaks each speed in the browser. `--speak` additionally
+speaks on the server's speakers (off by default, unlike the CLI).
+
 ## Files
 
 | File | What it is |
 |------|------------|
-| `pocket_radar_client.py` | The tool: pairs, decrypts, and prints speeds + battery/units/status. |
+| `pocket_radar_client.py` | The CLI: pairs, decrypts, and prints speeds + battery/units/status. |
 | `prlib.py` | Pure-Python reimplementation of the app's crypto (`encrypt`/`decrypt`/`return_key`). |
+| `radar_web.py` | FastAPI/uvicorn web dashboard around the same client (WebSocket push). |
+| `static/index.html` | The dashboard page (no build step, no external assets). |
 
 ## How it works (short version)
 
