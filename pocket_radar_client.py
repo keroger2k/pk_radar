@@ -30,6 +30,9 @@ import asyncio
 import os
 import pathlib
 import secrets
+import shutil
+import subprocess
+import sys
 from datetime import datetime
 
 from bleak import BleakClient, BleakScanner
@@ -83,12 +86,27 @@ def ts():
     return datetime.now().strftime("%H:%M:%S")
 
 
+def speech_command() -> list[str] | None:
+    """Return the argv prefix for a text-to-speech CLI, or None if none exists.
+    macOS ships `say`; common Linux equivalents are `spd-say` and `espeak`."""
+    if sys.platform == "darwin" and shutil.which("say"):
+        return ["say"]
+    for name in ("spd-say", "espeak"):
+        if shutil.which(name):
+            return [name]
+    return None
+
+
 class PocketRadar:
-    def __init__(self, pwd, units="mph"):
+    def __init__(self, pwd, units="mph", speak=True):
         self.lib = PrLib()
         self.pwd = pwd
         self.units = units
         self.client: BleakClient | None = None
+        self.say_cmd = speech_command() if speak else None
+        self.say_proc: subprocess.Popen | None = None
+        if speak and not self.say_cmd:
+            print("(no text-to-speech command found; speeds won't be spoken)")
         self._reset()
 
     def _reset(self):
@@ -183,10 +201,25 @@ class PocketRadar:
         elif data[2] == 12:
             print(f"[{ts()}] radar rejected the password (put it in pairing mode)")
 
+    def _speak(self, text: str):
+        """Say `text` on the default speakers, without blocking the event loop.
+        Fire-and-forget: launch the TTS process and move on. If a previous
+        reading is still being spoken, stop it so the latest speed wins."""
+        if not self.say_cmd:
+            return
+        if self.say_proc and self.say_proc.poll() is None:
+            self.say_proc.terminate()
+        self.say_proc = subprocess.Popen(
+            self.say_cmd + [text],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
     def _handle_frame(self, pt: bytes):
         kind = pt[2]
         if kind == MSG_SPEED and pt[3] == 0:
-            print(f"[{ts()}]  ⚾  {pt[13] & 0xFF} {self.units}")
+            speed = pt[13] & 0xFF
+            print(f"[{ts()}]  ⚾  {speed} {self.units}")
+            self._speak(str(speed))
 
         elif kind == MSG_STATUS and pt[3] == 0:
             # [10]=battery(1-4) [11]=usb(0/1) [12]=units(0 mph/1 kph) [13]=meas(1)/idle(2)
@@ -249,13 +282,15 @@ async def main():
     ap.add_argument("--address", help="BLE address (macOS: CoreBluetooth UUID)")
     ap.add_argument("--pwd", help="9-byte pairing password as hex", default=None)
     ap.add_argument("--kph", action="store_true", help="assume kph units")
+    ap.add_argument("--speak", action=argparse.BooleanOptionalAction, default=True,
+                    help="speak each speed aloud on the default speakers (default: on)")
     args = ap.parse_args()
 
     pwd = load_password(args.pwd)
     if len(pwd) != 9:
         raise SystemExit("password must be 9 bytes (18 hex chars)")
 
-    radar = PocketRadar(pwd=pwd, units="kph" if args.kph else "mph")
+    radar = PocketRadar(pwd=pwd, units="kph" if args.kph else "mph", speak=args.speak)
     await radar.run_forever(args.address)
 
 

@@ -15,8 +15,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # run (radar accepts ONE BLE connection at a time — close the phone app first)
-python pocket_radar_client.py            # scan, pair, stream speeds
+python pocket_radar_client.py            # scan, pair, stream speeds (speaks each speed aloud)
 python pocket_radar_client.py --kph      # label speeds as kph
+python pocket_radar_client.py --no-speak # don't read speeds aloud
 python pocket_radar_client.py --address <ble-address>
 python pocket_radar_client.py --pwd <hex>   # 9-byte pairing password as 18 hex chars
 

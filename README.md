@@ -47,10 +47,14 @@ phone app, reuse the app's password instead of generating a new one.)
 # close the phone app first — the radar accepts one connection at a time
 python pocket_radar_client.py            # scan, pair, stream speeds
 python pocket_radar_client.py --kph      # label speeds as kph
+python pocket_radar_client.py --no-speak # don't read speeds aloud
 python pocket_radar_client.py --address <ble-address>
 ```
 
-It auto-reconnects when the radar drops the link. `Ctrl-C` to stop.
+By default each speed is also spoken aloud on the default speakers (macOS `say`,
+or `spd-say`/`espeak` on Linux; silently skipped if none is installed). Pass
+`--no-speak` to disable. It auto-reconnects when the radar drops the link.
+`Ctrl-C` to stop.
 
 ## Files
 
