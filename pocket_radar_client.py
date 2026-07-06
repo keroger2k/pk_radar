@@ -5,7 +5,7 @@ Connects to the radar over BLE, performs the same encrypted handshake the
 official app does, and prints every speed reading the radar broadcasts.
 
 How it works (reverse-engineered from the Android app's libprlib.so + a
-PacketLogger capture — see FINDINGS.md):
+PacketLogger capture):
 
   1. Enable notifications on the Speed-Measurement characteristic.
   2. Send the 9-byte pairing password (plaintext) to the Radar-Command char.

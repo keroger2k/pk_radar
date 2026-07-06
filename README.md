@@ -14,7 +14,7 @@ official phone app receives.
 
 The radar's BLE payloads are AES-encrypted behind a challenge/response handshake,
 so a plain BLE client sees nothing useful. This tool reproduces the handshake and
-decrypts the stream. See [`FINDINGS.md`](FINDINGS.md) for the full protocol writeup.
+decrypts the stream. The "How it works" section below summarizes the protocol.
 
 ## Legal / scope
 
@@ -69,8 +69,6 @@ It auto-reconnects when the radar drops the link. `Ctrl-C` to stop.
 |------|------------|
 | `pocket_radar_client.py` | The tool: pairs, decrypts, and prints speeds + battery/units/status. |
 | `prlib.py` | Pure-Python reimplementation of the app's crypto (`encrypt`/`decrypt`/`return_key`). |
-| `pocket_radar.py` | BLE utility: `scan` / `explore` (GATT dump) / `listen` (raw notifications). |
-| `FINDINGS.md` | How the protocol and encryption were reverse-engineered. |
 
 ## How it works (short version)
 

@@ -4,7 +4,7 @@
 The official app does this in a native library (libprlib.so). This module
 reproduces it in pure Python so the tool needs no proprietary binary — only
 `pycryptodome`. Every function below was verified byte-for-byte against the
-real library (emulated) on random inputs; see FINDINGS.md.
+real library (run under a CPU emulator) on random inputs.
 
   - encrypt(data16, key16) / decrypt(data16, key16): plain AES-128-ECB.
   - return_key(cipher24): derives the 16-byte session key from the three
