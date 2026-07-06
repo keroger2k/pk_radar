@@ -16,17 +16,6 @@ The radar's BLE payloads are AES-encrypted behind a challenge/response handshake
 so a plain BLE client sees nothing useful. This tool reproduces the handshake and
 decrypts the stream. The "How it works" section below summarizes the protocol.
 
-## Legal / scope
-
-This is an independent, unofficial interoperability tool for talking to a radar
-**you own**. It is not affiliated with or endorsed by Pocket Radar, Inc.
-
-It does **not** bundle any Pocket Radar binary or the decompiled app. The payload
-encryption is standard AES-128, and the session-key derivation was reverse-
-engineered and re-implemented in pure Python (`prlib.py`) for interoperability.
-The app APK, its native library, the decompiled sources, and BLE captures are all
-git-ignored and must never be committed or redistributed.
-
 ## Requirements
 
 - Python 3.10+
