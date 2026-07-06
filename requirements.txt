@@ -1,0 +1,2 @@
+bleak         # cross-platform Bluetooth LE client
+pycryptodome  # AES-128 (the radar's payload encryption)

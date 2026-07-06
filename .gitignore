@@ -1,0 +1,14 @@
+# Secrets / personal
+radar_password.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
